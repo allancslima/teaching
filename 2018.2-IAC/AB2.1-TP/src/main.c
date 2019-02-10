@@ -1,33 +1,102 @@
-#include <unistd.h> 
-#include <sys/types.h> 
-#include <sys/wait.h> 
-#include <stdio.h> 
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <time.h>
 
-int main (int argc, char *argv[], char *envp[]) {
+#define ARG_CPU "cpu"
+#define ARG_CPU_AND_MEMORY "cpu-mem"
 
-int pid ; /* identificador de processo */
+#define DEFAULT_TIME_TRACKING 10
+#define DEFAULT_MEMORY_ALLOCATION 1000000
 
-pid = fork () ; /* replicacção do processo */
+#define CMD_CPU_USAGE_FORMAT "ps u %d | awk '{print $3}' | grep -v CPU"
+#define CMD_KILL_PROCESS_FORMAT "kill %d"
 
-if ( pid < 0 ) { /* se o fork não funcionou */
-	perror ("Erro: ") ;
-	exit (-1) ; /* encerra o processo com código de erro -1 */ 
-}
-else if( pid > 0 ) /* se sou o processo pai*/ 
+void displayProcessCpuUsage(int pid)
 {
-	//TODO guarde a cada segundo o consumo de memória (em Kilobytes) e CPU (em porcentagem) do processo filho
-	//TODO após 10 segundos de execução, mate o proceso filho
+	char bash_cmd[256];
+	sprintf(bash_cmd, CMD_CPU_USAGE_FORMAT, pid);
+	
+	FILE* pipe = popen(bash_cmd, "r");
+
+	if (pipe == NULL)
+	{
+		printf("Error!");
+		exit(-1);
+	}
+
+	char buffer[8];
+	char* cpuUsage = fgets(buffer, sizeof(buffer), pipe);
+	pclose(pipe);
+
+	printf("CPU: %% %s\n", cpuUsage);
 }
-else /* senão, sou o processo filho (pid == 0) */ 
+
+void trackProcessResourcesUsage(int pid, int timeInSeconds, int trackMemory)
 {
-	//TODO se argv[1] for igual a 'cpu', executar código com utilização intensa da UCP
-	//TODO se argv[1] for igual a 'cpu-mem', executar código com utilização intensa da UCP e da memória
+	time_t currentTime = time(NULL);
+	time_t finalTime = currentTime + timeInSeconds + 1;
+	time_t seconds = currentTime;
+	struct tm* timeInfo;
+
+	while (currentTime < finalTime)
+	{
+		currentTime = time(NULL);
+		if (currentTime != seconds)
+		{
+			seconds = currentTime;
+			timeInfo = localtime(&seconds);
+			printf("%s", asctime(timeInfo));
+			displayProcessCpuUsage(pid);
+		}
+	}
+	char cmd_kill_process[32];
+	sprintf(cmd_kill_process, CMD_KILL_PROCESS_FORMAT, pid);
+	system(cmd_kill_process);
+}
+
+void consumeCPU()
+{
+	for (;;) {}
+}
+
+void consumeCPUAndMemory()
+{
 
 }
-perror ("Erro: ") ; /* execve nãoo funcionou */
 
-printf ("Tchau !\n") ;
-exit(0) ; /* encerra o processo com sucesso (código 0) */ 
+int main (int argc, char *argv[])
+{
+	int pid = fork();
 
+	if (pid < 0)
+	{
+		printf("An error occurred during fork process!");
+		exit(-1);
+	}
+	else if (pid > 0)
+	{
+		if (strcmp(argv[1], ARG_CPU) == 0)
+		{
+			trackProcessResourcesUsage(pid, DEFAULT_TIME_TRACKING, 0);
+		}
+		else if (strcmp(argv[1], ARG_CPU_AND_MEMORY) == 0)
+		{
+			trackProcessResourcesUsage(pid, DEFAULT_TIME_TRACKING, 1);
+		}
+	}
+	else
+	{
+		if (strcmp(argv[1], ARG_CPU) == 0)
+		{
+			consumeCPU();
+		}
+		else if (strcmp(argv[1], ARG_CPU_AND_MEMORY) == 0)
+		{
+			consumeCPUAndMemory();
+		}
+	}
+	return 0;
 }
