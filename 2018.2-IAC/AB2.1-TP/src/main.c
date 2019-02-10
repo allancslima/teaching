@@ -9,15 +9,15 @@
 #define ARG_CPU_AND_MEMORY "cpu-mem"
 
 #define DEFAULT_TIME_TRACKING 10
-#define DEFAULT_MEMORY_ALLOCATION 1000000
+#define DEFAULT_MEM_ALLOCATION 1
 
-#define CMD_CPU_USAGE_FORMAT "ps u %d | awk '{print $3}' | grep -v CPU"
+#define CMD_CPU_MEM_USAGE_FORMAT "ps u %d | awk '{print $3, $4}' | grep -v %%"
 #define CMD_KILL_PROCESS_FORMAT "kill %d"
 
-void display_process_cpu_usage(int pid)
+void display_process_resources_usage(int pid, int display_mem)
 {
 	char bash_cmd[256];
-	sprintf(bash_cmd, CMD_CPU_USAGE_FORMAT, pid);
+	sprintf(bash_cmd, CMD_CPU_MEM_USAGE_FORMAT, pid);
 	
 	FILE* pipe = popen(bash_cmd, "r");
 
@@ -26,11 +26,17 @@ void display_process_cpu_usage(int pid)
 		exit(-1);
 	}
 
-	char buffer[8];
-	char* cpu_usage = fgets(buffer, sizeof(buffer), pipe);
+	char buffer[16];
+	char* resources_usage = fgets(buffer, sizeof(buffer), pipe);
 	pclose(pipe);
 
+	char *cpu_usage = strtok(resources_usage, " ");
 	printf("CPU: %% %s\n", cpu_usage);
+	
+	if (!display_mem) return;
+
+	char *mem_usage = strtok(NULL, " ");
+	printf("MEM: %% %s", mem_usage);
 }
 
 void track_process_resources_usage(int pid, int time_in_seconds, int track_memory)
@@ -45,10 +51,12 @@ void track_process_resources_usage(int pid, int time_in_seconds, int track_memor
 		if (current_time != seconds) {
 			seconds = current_time;
 			time_info = localtime(&seconds);
-			printf("%s", asctime(time_info));
-			display_process_cpu_usage(pid);
+			printf("\n%s", asctime(time_info));
+			display_process_resources_usage(pid, track_memory);
 		}
 	}
+	printf("\n");
+
 	char cmd_kill_process[32];
 	sprintf(cmd_kill_process, CMD_KILL_PROCESS_FORMAT, pid);
 	system(cmd_kill_process);
@@ -56,12 +64,14 @@ void track_process_resources_usage(int pid, int time_in_seconds, int track_memor
 
 void consume_cpu()
 {
-	for (;;) {}
+	while (1) {}
 }
 
 void consume_cpu_and_memory()
 {
-
+	while (1) {
+		malloc(DEFAULT_MEM_ALLOCATION);
+	}
 }
 
 int main (int argc, char *argv[])
