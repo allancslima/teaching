@@ -29,31 +29,34 @@ void display_process_resources_usage(int pid, int display_mem)
 
 	char buffer[64];
 	char* cpu_usage = fgets(buffer, sizeof(buffer), pipe);
-	printf("CPU:  %% = %s", cpu_usage);
+	printf("CPU:  %% %s", cpu_usage);
 
 	if (display_mem) {
 		sprintf(bash_cmd, CMD_MEM_USAGE_FORMAT, pid);
 		pipe = popen(bash_cmd, "r");
 
 		char* mem_usage = fgets(buffer, sizeof(buffer), pipe);
-		printf("MEM: KB = %s", mem_usage);
+		printf("MEM: KB %s", mem_usage);
 	}
 	pclose(pipe);
 }
 
 void track_process_resources_usage(int pid, int time_in_seconds, int track_memory)
 {
-	time_t current_time = time(NULL);
-	time_t final_time = current_time + time_in_seconds + 1;
-	time_t current_time_aux = current_time;
+	time_t start, end;
+	double elapsed = 0.0;
+	int elapsed_aux = -1;
 	struct tm* time_info;
+	
+	time(&start);
 
-	while (current_time < final_time) {
-		current_time = time(NULL);
+	while (elapsed < time_in_seconds) {
+		time(&end);
+		elapsed = difftime(end, start);
 
-		if (current_time_aux != current_time) {
-			current_time_aux = current_time;
-			time_info = localtime(&current_time_aux);
+		if (elapsed_aux != (int) elapsed) {
+			elapsed_aux = elapsed;
+			time_info = localtime(&end);
 			
 			printf("\n%s", asctime(time_info));
 			display_process_resources_usage(pid, track_memory);
