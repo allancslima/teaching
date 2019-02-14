@@ -6,18 +6,19 @@
 #include <time.h>
 
 #define ARG_CPU "cpu"
-#define ARG_CPU_AND_MEMORY "cpu-mem"
+#define ARG_CPU_AND_MEM "cpu-mem"
 
 #define DEFAULT_TIME_TRACKING 10
 #define DEFAULT_MEM_ALLOCATION 1
 
-#define CMD_CPU_MEM_USAGE_FORMAT "ps u %d | awk '{print $3, $4}' | grep -v %%"
+#define CMD_CPU_USAGE_FORMAT "ps u %d | awk '{print $3}' | grep -v %%"
+#define CMD_MEM_USAGE_FORMAT "ps u %d | awk '{print $5}' | grep -v VSZ"
 #define CMD_KILL_PROCESS_FORMAT "kill %d"
 
 void display_process_resources_usage(int pid, int display_mem)
 {
 	char bash_cmd[256];
-	sprintf(bash_cmd, CMD_CPU_MEM_USAGE_FORMAT, pid);
+	sprintf(bash_cmd, CMD_CPU_USAGE_FORMAT, pid);
 	
 	FILE* pipe = popen(bash_cmd, "r");
 
@@ -26,31 +27,34 @@ void display_process_resources_usage(int pid, int display_mem)
 		exit(-1);
 	}
 
-	char buffer[16];
-	char* resources_usage = fgets(buffer, sizeof(buffer), pipe);
+	char buffer[64];
+	char* cpu_usage = fgets(buffer, sizeof(buffer), pipe);
+	printf("CPU:  %% = %s", cpu_usage);
+
+	if (display_mem) {
+		sprintf(bash_cmd, CMD_MEM_USAGE_FORMAT, pid);
+		pipe = popen(bash_cmd, "r");
+
+		char* mem_usage = fgets(buffer, sizeof(buffer), pipe);
+		printf("MEM: KB = %s", mem_usage);
+	}
 	pclose(pipe);
-
-	char *cpu_usage = strtok(resources_usage, " ");
-	printf("CPU: %% %s\n", cpu_usage);
-	
-	if (!display_mem) return;
-
-	char *mem_usage = strtok(NULL, " ");
-	printf("MEM: %% %s", mem_usage);
 }
 
 void track_process_resources_usage(int pid, int time_in_seconds, int track_memory)
 {
 	time_t current_time = time(NULL);
 	time_t final_time = current_time + time_in_seconds + 1;
-	time_t seconds = current_time;
+	time_t current_time_aux = current_time;
 	struct tm* time_info;
 
 	while (current_time < final_time) {
 		current_time = time(NULL);
-		if (current_time != seconds) {
-			seconds = current_time;
-			time_info = localtime(&seconds);
+
+		if (current_time_aux != current_time) {
+			current_time_aux = current_time;
+			time_info = localtime(&current_time_aux);
+			
 			printf("\n%s", asctime(time_info));
 			display_process_resources_usage(pid, track_memory);
 		}
@@ -86,7 +90,7 @@ int main (int argc, char *argv[])
 		if (strcmp(argv[1], ARG_CPU) == 0) {
 			track_process_resources_usage(pid, DEFAULT_TIME_TRACKING, 0);
 		}
-		else if (strcmp(argv[1], ARG_CPU_AND_MEMORY) == 0) {
+		else if (strcmp(argv[1], ARG_CPU_AND_MEM) == 0) {
 			track_process_resources_usage(pid, DEFAULT_TIME_TRACKING, 1);
 		}
 	}
@@ -94,7 +98,7 @@ int main (int argc, char *argv[])
 		if (strcmp(argv[1], ARG_CPU) == 0) {
 			consume_cpu();
 		}
-		else if (strcmp(argv[1], ARG_CPU_AND_MEMORY) == 0) {
+		else if (strcmp(argv[1], ARG_CPU_AND_MEM) == 0) {
 			consume_cpu_and_memory();
 		}
 	}
