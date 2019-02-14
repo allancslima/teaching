@@ -5,8 +5,8 @@
 #include <unistd.h>
 #include <time.h>
 
-#define ARG_CPU "cpu"
-#define ARG_CPU_AND_MEM "cpu-mem"
+#define ARG_CPU "ucp"
+#define ARG_CPU_MEM "ucp-mem"
 
 #define DEFAULT_TIME_TRACKING 10
 #define DEFAULT_MEM_ALLOCATION 1
@@ -54,13 +54,13 @@ void track_process_resources_usage(int pid, int time_in_seconds, int track_memor
 		time(&end);
 		elapsed = difftime(end, start);
 
-		if (elapsed_aux != (int) elapsed) {
-			elapsed_aux = elapsed;
-			time_info = localtime(&end);
+		if (elapsed_aux == (int) elapsed) continue;
+		
+		elapsed_aux = elapsed;
+		time_info = localtime(&end);
 			
-			printf("\n%s", asctime(time_info));
-			display_process_resources_usage(pid, track_memory);
-		}
+		printf("\n%s", asctime(time_info));
+		display_process_resources_usage(pid, track_memory);
 	}
 	printf("\n");
 
@@ -83,6 +83,11 @@ void consume_cpu_and_memory()
 
 int main (int argc, char *argv[])
 {
+	if (argv[1] == NULL || (strcmp(argv[1], ARG_CPU) != 0 && strcmp(argv[1], ARG_CPU_MEM) != 0)) {
+		printf("\nUse %s or %s as argument.\n\n", ARG_CPU, ARG_CPU_MEM);
+		return 0;
+	}
+
 	int pid = fork();
 
 	if (pid < 0) {
@@ -93,7 +98,7 @@ int main (int argc, char *argv[])
 		if (strcmp(argv[1], ARG_CPU) == 0) {
 			track_process_resources_usage(pid, DEFAULT_TIME_TRACKING, 0);
 		}
-		else if (strcmp(argv[1], ARG_CPU_AND_MEM) == 0) {
+		else if (strcmp(argv[1], ARG_CPU_MEM) == 0) {
 			track_process_resources_usage(pid, DEFAULT_TIME_TRACKING, 1);
 		}
 	}
@@ -101,7 +106,7 @@ int main (int argc, char *argv[])
 		if (strcmp(argv[1], ARG_CPU) == 0) {
 			consume_cpu();
 		}
-		else if (strcmp(argv[1], ARG_CPU_AND_MEM) == 0) {
+		else if (strcmp(argv[1], ARG_CPU_MEM) == 0) {
 			consume_cpu_and_memory();
 		}
 	}
