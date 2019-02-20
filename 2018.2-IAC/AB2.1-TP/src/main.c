@@ -56,6 +56,13 @@ char* get_process_resources_usage(int pid, int display_mem)
 	return result;
 }
 
+void kill_process(int pid)
+{
+	char cmd[32];
+	sprintf(cmd, CMD_KILL_PROCESS_FORMAT, pid);
+	system(cmd);
+}
+
 void format_file_name_date(char string[])
 {
 	int i = strlen(string);
@@ -63,6 +70,26 @@ void format_file_name_date(char string[])
 		if (string[i] == ' ') string[i] = '-';
 		if (string[i] == '\n') string[i] = '\0';
 	}
+}
+
+FILE* create_result_file(char* date)
+{
+	int date_length = strlen(date);
+	char* file_name_date = malloc(sizeof(char) * date_length);
+	strncpy(file_name_date, date, date_length);
+	format_file_name_date(file_name_date);
+
+	int file_name_length = sizeof(char) * (strlen(FILE_PATH_FORMAT) - 1 + strlen(file_name_date));
+	char* file_name = malloc(file_name_length);
+	sprintf(file_name, FILE_PATH_FORMAT, file_name_date);
+
+	FILE* file = fopen(file_name, "w");
+
+	if (file == NULL) {
+		perror("Error");
+		exit(-1);
+	}
+	return file;
 }
 
 void track_process_resources_usage(int pid, int time_in_seconds, int track_memory, int storageResult)
@@ -92,20 +119,7 @@ void track_process_resources_usage(int pid, int time_in_seconds, int track_memor
 		if (!storageResult) continue;
 		
 		if (result_file == NULL) {
-			int length = strlen(date);
-			char* file_name_date = malloc(sizeof(char) * length);
-			strncpy(file_name_date, date, length);
-			format_file_name_date(file_name_date);
-
-			int file_name_length = sizeof(char) * (strlen(FILE_PATH_FORMAT) - 1 + strlen(file_name_date));
-			char* file_name = malloc(file_name_length);
-			sprintf(file_name, FILE_PATH_FORMAT, file_name_date);
-
-			result_file = fopen(file_name, "w");
-			if (result_file == NULL) {
-				perror("Error");
-				exit(-1);
-			}
+			result_file = create_result_file(date);
 			fputs(FILE_TITLE, result_file);
 		}
 		fputs("\n", result_file);
@@ -114,10 +128,8 @@ void track_process_resources_usage(int pid, int time_in_seconds, int track_memor
 	}
 	printf("\n");
 	if (result_file != NULL) fclose(result_file);
-	
-	char cmd_kill_process[32];
-	sprintf(cmd_kill_process, CMD_KILL_PROCESS_FORMAT, pid);
-	system(cmd_kill_process);
+
+	kill_process(pid);
 }
 
 void consume_cpu()
