@@ -11,8 +11,8 @@
 #define FILE_PATH_FORMAT "%s.txt"
 #define FILE_TITLE "Generated file\n"
 
-#define DEFAULT_TIME_TRACKING 10
-#define DEFAULT_MEM_ALLOCATION 1
+#define DEFAULT_TIME_TRACKING 10 // 10 seconds
+#define DEFAULT_MEM_ALLOCATION 1 // 1 byte
 
 #define CMD_CPU_USAGE_FORMAT "ps u %d | awk '{print $3}' | grep -v %%"
 #define CMD_MEM_USAGE_FORMAT "ps u %d | awk '{print $5}' | grep -v VSZ"
@@ -22,9 +22,9 @@
 #define DISPLAY_CPU_MEM_FORMAT "CPU:  %% %sMEM: KB %s"
 
 /*
- * get_process_resources_usage - kill process
+ * get_process_resources_usage - retrieve cpu usage in percentage and memory usage in KB to a process 
  *
- * @pid: process id to be killed
+ * @pid: process id to be checked
  * @display_mem: boolean to display memory usage too
  *
  * returns a pointer to resources usage string
@@ -81,7 +81,7 @@ void kill_process(int pid)
 /*
  * format_date_as_file_name - remove white spaces from date string
  *
- * @string:
+ * @string: to be formatted
 */
 void format_date_as_file_name(char string[])
 {
